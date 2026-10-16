@@ -500,13 +500,22 @@ Return the text the edit buffer started with."
 
 (ert-deftest mdwt-test-unload ()
   "Unloading leaves no stale hooks behind in buffers using the mode."
-  (with-temp-buffer
-    (insert "| a | b |\n|---|---|\n| x | y |\n")
-    (mdwt-mode 1)
-    (unload-feature 'mdwt t)
-    (should (null post-command-hook))
-    (should-not (memq 'mdwt--emulation-alist emulation-mode-map-alists)))
-  (require 'mdwt))
+  (unwind-protect
+      (with-temp-buffer
+        (insert "| a | b |\n|---|---|\n| x | y |\n")
+        (mdwt-mode 1)
+        (unload-feature 'mdwt t)
+        ;; Only mdwt's own functions must be gone; other modes (e.g.
+        ;; `global-eldoc-mode' on Emacs 29) keep theirs in these hooks.
+        (dolist (hook '(post-command-hook after-change-functions window-size-change-functions))
+          (ert-info ((format "%s" hook))
+            (should-not (memq 'mdwt--reveal (symbol-value hook)))
+            (should-not (memq 'mdwt--schedule (symbol-value hook)))
+            (should-not (memq 'mdwt--on-resize (symbol-value hook)))
+            (should-not (memq 'mdwt--reveal (default-value hook)))))
+        (should-not (memq 'mdwt--emulation-alist emulation-mode-map-alists)))
+    ;; Reload even if an assertion failed, so later tests still have mdwt.
+    (require 'mdwt)))
 
 (provide 'mdwt-test)
 ;;; mdwt-test.el ends here
