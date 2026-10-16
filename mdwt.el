@@ -385,7 +385,7 @@ screen line; ROW is nil for rules, 0 for the header."
     (- (if win (window-body-width win) 80) mdwt-margin)))
 
 (defun mdwt--colpos (str ncols)
-  "Vector of NCOLS indexes in screen line STR where each column's text starts."
+  "Return the index in screen line STR of each of NCOLS columns' text."
   (let ((v (make-vector ncols 0)))
     (dotimes (i (length str))
       (let ((id (get-text-property i 'mdwt-cell str)))
@@ -455,7 +455,7 @@ rendered to AVAIL columns, with FACE (if non-nil) as the base face."
       s)))
 
 (defun mdwt--paint (tbl)
-  "Draw every screen line of TBL (unless it shows raw source)."
+  "Draw every screen line of TBL, unless TBL is revealed as raw source."
   (when (and tbl (overlay-buffer tbl) (not (eq tbl mdwt--revealed)))
     (let* ((slices (overlay-get tbl 'mdwt-slices))
            (n (length slices))
@@ -640,7 +640,7 @@ With `mdwt-reveal-at-point', also reveal any table point moves onto."
   (setq mdwt--cell (cons (car mdwt--cell) (1- (cdr (overlay-get mdwt--cell-ov 'mdwt-shape))))))
 
 (defun mdwt--text-lines (tbl cell)
-  "Screen lines of TBL on which CELL shows text (its first line if blank)."
+  "Return the screen lines of TBL holding CELL's text (its first line if blank)."
   (let ((strs (overlay-get tbl 'mdwt-strs))
         (rows (overlay-get tbl 'mdwt-rows))
         found)
@@ -703,7 +703,7 @@ With `mdwt-reveal-at-point', also reveal any table point moves onto."
   (when mdwt--cell-ov (mdwt-edit-cell)))
 
 (defun mdwt--source-cell (tbl pos)
-  "The (ROW . COL) whose raw source in TBL contains POS."
+  "Return the (ROW . COL) of the cell of TBL at raw-source position POS."
   (save-excursion
     (goto-char pos)
     (let* ((li (count-lines (overlay-start tbl) (line-beginning-position)))
@@ -1192,7 +1192,8 @@ With KEEP-POINT, don't pull point back into the table afterwards."
   (message "Cell edit cancelled"))
 
 (defun mdwt-cell-type ()
-  "Typing in a cell starts editing it in place (see `mdwt-edit-method')."
+  "Start editing the cell in place with the typed character.
+See `mdwt-edit-method'; other methods refuse typing in the table."
   (interactive)
   (if (not (eq mdwt-edit-method 'inplace))
       (mdwt-cell-blocked)
@@ -1200,7 +1201,7 @@ With KEEP-POINT, don't pull point back into the table afterwards."
     (call-interactively #'mdwt-ip-insert)))
 
 (defun mdwt-cell-type-backspace ()
-  "Backspace in a cell starts editing it in place, deleting its last character."
+  "Start editing the cell in place, deleting its last character."
   (interactive)
   (if (not (eq mdwt-edit-method 'inplace))
       (mdwt-cell-blocked)
@@ -1273,7 +1274,7 @@ In a table the cursor moves cell by cell and line by line:
   (message "mdwt %s loaded from %s" mdwt-version mdwt--load-file))
 
 (defun mdwt-unload-function ()
-  "Turn `mdwt-mode' off everywhere so `unload-feature' leaves no stale hooks."
+  "Turn `mdwt-mode' off everywhere, so that no stale hooks survive unloading."
   (dolist (buf (buffer-list))
     (with-current-buffer buf
       (when mdwt-mode (mdwt-mode -1))))

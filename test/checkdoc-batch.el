@@ -11,6 +11,8 @@
 (require 'checkdoc)
 
 (let ((checkdoc-arguments-in-order-flag nil)
+      ;; On by default before Emacs 31; force it so every version agrees.
+      (checkdoc-verb-check-experimental-flag t)
       (warnings 0))
   (advice-add 'checkdoc-create-error :after
               (lambda (&rest _) (setq warnings (1+ warnings))))
