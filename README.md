@@ -449,9 +449,8 @@ that cell's text in the pipe-table line.
 
 ## Troubleshooting
 
-- **Check which copy is loaded:** each load prints
-  `mdwt X.Y.Z loaded from /path/...` in `*Messages*`.
-  `M-x mdwt-version` shows the same. If the path isn't the one you expect,
+- **Check which copy is loaded:** `M-x mdwt-version` shows
+  `mdwt X.Y.Z loaded from /path/...`. If the path isn't the one you expect,
   `M-x locate-library RET mdwt` shows which file `require` finds.
   A stale compiled copy, for example under `straight/build/`, can shadow the
   one you are editing.

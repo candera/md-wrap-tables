@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Loading the package no longer has side effects. It doesn't print a
+  message (use `M-x mdwt-version`), and its keymaps are registered when
+  `mdwt-mode` is first turned on rather than at load time.
+- The package header has an `Assisted-by:` line, as MELPA asks for code
+  written with AI assistance.
+- The install instructions put straight.el first and explain the *"Could not
+  find package mdwt"* error with `straight-use-package-by-default`.
+
+### Fixed
+
+- Docstrings use the imperative mood that checkdoc requires on Emacs 29
+  and 30.
+- The unload test passes on Emacs 29.
+
 ## [0.6.0] - 2026-10-16
 
 ### Changed

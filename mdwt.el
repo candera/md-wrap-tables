@@ -3,6 +3,7 @@
 ;; Copyright (C) 2026  Mo Hossny
 
 ;; Author: Mo Hossny <cmoxiv@gmail.com>
+;; Assisted-by: Claude:claude-opus-5-5
 ;; Maintainer: Mo Hossny <cmoxiv@gmail.com>
 ;; URL: https://github.com/cmoxiv/md-wrap-tables
 ;; Version: 0.6.0
@@ -822,9 +823,9 @@ is re-rendered automatically when point leaves the table."
 ;; Emulation maps outrank major- and minor-mode maps, so TAB/RET reach us
 ;; even in modes (and with packages) that bind them.  In-place editing
 ;; keys come first; anything they don't bind falls through to cell keys.
+;; Registered by `mdwt-mode', not at load time.
 (defvar mdwt--emulation-alist `((mdwt--ip-text . ,mdwt-inplace-map)
                                 (mdwt--cell-ov . ,mdwt-cell-map)))
-(add-to-list 'emulation-mode-map-alists 'mdwt--emulation-alist)
 
 ;;;; Cell editing
 
@@ -1252,6 +1253,7 @@ In a table the cursor moves cell by cell and line by line:
   :lighter " ⊞"
   (if mdwt-mode
       (progn
+        (add-to-list 'emulation-mode-map-alists 'mdwt--emulation-alist)
         (add-hook 'after-change-functions #'mdwt--schedule nil t)
         (add-hook 'post-command-hook #'mdwt--reveal nil t)
         (add-hook 'window-size-change-functions #'mdwt--on-resize nil t)
@@ -1283,5 +1285,4 @@ In a table the cursor moves cell by cell and line by line:
   nil)
 
 (provide 'mdwt)
-(mdwt-version)
 ;;; mdwt.el ends here
