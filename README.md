@@ -211,6 +211,192 @@ leaves the table.
 
 Tables also use `markdown-table-face` when `markdown-mode` defines it.
 
+### Customisation examples
+
+Each example works on its own. Put it in your init file, or in a
+`use-package mdwt` block's `:config`.
+
+**Edit long cells in a window instead of in place**
+
+```elisp
+(setq mdwt-edit-method 'buffer      ; or 'minibuffer
+      mdwt-edit-window-height 12)
+```
+
+**Compact tables:** no rule between body rows, narrower minimum column
+width, and the full window width used.
+
+```elisp
+(setq mdwt-row-separators nil
+      mdwt-min-width 5
+      mdwt-margin 0)
+```
+
+**Re-render faster after typing or resizing**
+
+```elisp
+(setq mdwt-delay 0.1)
+```
+
+**Always show the raw table source when the cursor is on a table** (the
+behaviour before 0.2.0; turns off the cell cursor)
+
+```elisp
+(setq mdwt-reveal-at-point t)
+```
+
+**Colours for the current and edited cell**
+
+```elisp
+(custom-set-faces
+ '(mdwt-current-cell ((t (:background "#2f3b54" :weight bold))))
+ '(mdwt-editing-cell ((t (:background "#3b2f54" :underline t)))))
+
+;; or adjust one attribute, e.g. reuse another face's colours:
+(set-face-attribute 'mdwt-editing-cell nil :inherit 'secondary-selection)
+```
+
+To change the colour of the whole table, customise `markdown-table-face`.
+
+**Rebind or add keys:** the four keymaps are listed under [API](#api).
+
+```elisp
+(with-eval-after-load 'mdwt
+  ;; Anywhere in an mdwt buffer
+  (keymap-set mdwt-mode-map "C-c t" #'mdwt-toggle-source)
+  ;; On a table
+  (keymap-set mdwt-cell-map "C-c e" #'mdwt-edit-cell)
+  (keymap-set mdwt-cell-map "M-n"   #'mdwt-cell-down)
+  ;; While editing a cell in place
+  (keymap-set mdwt-inplace-map "C-j" #'mdwt-ip-commit-next))
+```
+
+**Turn off the mouse bindings** (`mouse-1` selects a cell, double-click
+edits it)
+
+```elisp
+(with-eval-after-load 'mdwt
+  (keymap-unset mdwt-mode-map "<mouse-1>" t)
+  (keymap-unset mdwt-mode-map "<double-mouse-1>" t))
+```
+
+**Skip very large files**
+
+```elisp
+(defun my/mdwt-maybe ()
+  "Turn on `mdwt-mode' unless the buffer is huge."
+  (unless (> (buffer-size) 500000)
+    (mdwt-mode 1)))
+
+(add-hook 'gfm-mode-hook #'my/mdwt-maybe)
+(add-hook 'markdown-mode-hook #'my/mdwt-maybe)
+```
+
+**Different settings per buffer:** set options buffer-locally before turning
+the mode on. `mdwt-mode-hook` runs after the first render, so layout options
+set there only apply from the next re-render.
+
+```elisp
+(defun my/mdwt-notes-setup ()
+  "Compact tables and minibuffer editing in my notes."
+  (when (and buffer-file-name (string-prefix-p (expand-file-name "~/notes/") buffer-file-name))
+    (setq-local mdwt-row-separators nil
+                mdwt-edit-method 'minibuffer))
+  (mdwt-mode 1))
+
+(add-hook 'gfm-mode-hook #'my/mdwt-notes-setup)
+```
+
+**Do something whenever the mode turns on:** for example, truncate rather
+than wrap the lines of a table too wide to fit (`mdwt-min-width` stops
+columns from shrinking further).
+
+```elisp
+(add-hook 'mdwt-mode-hook (lambda () (setq-local truncate-lines t)))
+```
+
+## API
+
+Symbols with a double dash (`mdwt--…`) are internal and may change between
+versions. Everything below is public.
+
+### Minor mode and hooks
+
+| Symbol                     | Kind          | Description                                                                         |
+| -------------------------- | ------------- | ----------------------------------------------------------------------------------- |
+| `mdwt-mode`                | minor mode    | Render the buffer's pipe tables as wrapped grids. Turn on from a major-mode hook.    |
+| `mdwt-mode-hook`           | hook          | Runs after `mdwt-mode` is turned on or off (after the first render).                |
+| `mdwt-cell-edit-mode`      | minor mode    | Active in the `*mdwt cell*` edit buffer (`buffer` edit method).                     |
+| `mdwt-cell-edit-mode-hook` | hook          | Runs when the cell edit buffer is set up.                                           |
+| `mdwt-unload-function`     | function      | Called by `unload-feature`; turns the mode off everywhere first.                    |
+
+### Keymaps
+
+| Keymap                    | Active                                         | Default bindings                                                           |
+| ------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------- |
+| `mdwt-mode-map`           | Whole buffer, while `mdwt-mode` is on          | `mouse-1`, `double-mouse-1`                                                |
+| `mdwt-cell-map`           | Point on a rendered table                      | Cell navigation, `RET`, typing starts an edit                              |
+| `mdwt-inplace-map`        | While a cell is edited in place                | Editing keys; keys it doesn't bind fall through to `mdwt-cell-map`         |
+| `mdwt-cell-edit-mode-map` | In the `*mdwt cell*` edit buffer               | `C-c C-c`, `C-c C-k`                                                       |
+
+`mdwt-cell-map` and `mdwt-inplace-map` are emulation keymaps. They take
+priority over major- and minor-mode bindings, so `TAB` and `RET` work on
+tables even in modes that bind them.
+
+### Commands: general
+
+| Command              | Description                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `mdwt-refresh`       | Re-render every table in the buffer now.                                                         |
+| `mdwt-toggle-source` | Toggle the table at point between the rendered grid and its raw source; point follows the cell. |
+| `mdwt-edit-cell`     | Edit the current cell using `mdwt-edit-method`.                                                  |
+| `mdwt-version`       | Show the loaded version and the file it was loaded from.                                         |
+
+### Commands: navigation (`mdwt-cell-map`)
+
+| Command                               | Default keys                | Description                                                  |
+| ------------------------------------- | --------------------------- | ------------------------------------------------------------ |
+| `mdwt-cell-down` / `mdwt-cell-up`     | `C-n` / `C-p`, `↓` / `↑`    | Next / previous screen line, also inside tall cells          |
+| `mdwt-cell-next` / `mdwt-cell-prev`   | `C-f` / `C-b`, `TAB` / `S-TAB` | Next / previous cell, wrapping across rows                |
+| `mdwt-cell-top` / `mdwt-cell-bottom`  | `C-a` / `C-e`               | First / last screen line of the cell's text                  |
+| `mdwt-cell-first` / `mdwt-cell-last`  | `M-a` / `M-e`               | First / last cell of the row                                 |
+| `mdwt-row-first` / `mdwt-row-last`    | `C-M-a` / `C-M-e`           | First (header) / last row, same column                       |
+| `mdwt-cell-type`                      | printing keys               | Start an in-place edit and insert the key (`inplace` method) |
+| `mdwt-cell-type-backspace`            | `DEL`                       | Start an in-place edit and delete backward                   |
+| `mdwt-cell-blocked`                   | `C-d`, `C-k`, `C-y`         | Refuse to change the rendered table; show the edit keys      |
+| `mdwt-mouse-select`                   | `mouse-1`                   | Set point; select the clicked cell                           |
+| `mdwt-mouse-edit`                     | `double-mouse-1`            | Edit the double-clicked cell                                 |
+
+### Commands: in-place editing (`mdwt-inplace-map`)
+
+| Command                                               | Default keys          | Description                                         |
+| ----------------------------------------------------- | --------------------- | --------------------------------------------------- |
+| `mdwt-ip-insert`                                      | printing keys         | Insert the typed character                          |
+| `mdwt-ip-delete-backward` / `mdwt-ip-delete-forward`  | `DEL` / `C-d`         | Delete a character                                  |
+| `mdwt-ip-forward-char` / `mdwt-ip-backward-char`      | `C-f` / `C-b`         | Move by character                                   |
+| `mdwt-ip-forward-word` / `mdwt-ip-backward-word`      | `M-f` / `M-b`         | Move by word                                        |
+| `mdwt-ip-line-start` / `mdwt-ip-line-end`             | `C-a` / `C-e`         | Start / end of the cell's current wrapped line      |
+| `mdwt-ip-next-line` / `mdwt-ip-previous-line`         | `C-n` / `C-p`         | Wrapped line down / up; past the edge, save and move |
+| `mdwt-ip-kill-line`                                   | `C-k`                 | Kill to the end of the cell text                    |
+| `mdwt-ip-yank`                                        | `C-y`                 | Yank, with line breaks turned into spaces           |
+| `mdwt-ip-undo`                                        | `C-/`                 | Undo the last change to the cell text               |
+| `mdwt-ip-commit`                                      | `RET`, `C-c C-c`      | Save the cell                                       |
+| `mdwt-ip-commit-next` / `mdwt-ip-commit-prev`         | `TAB` / `S-TAB`       | Save and move to the next / previous cell           |
+| `mdwt-ip-cancel`                                      | `C-g`, `C-c C-k`      | Discard the edit                                    |
+
+### Commands: edit buffer (`mdwt-cell-edit-mode-map`)
+
+| Command            | Default keys | Description                                  |
+| ------------------ | ------------ | -------------------------------------------- |
+| `mdwt-edit-commit` | `C-c C-c`    | Write the cell back into the table and close |
+| `mdwt-edit-abort`  | `C-c C-k`    | Close without saving                         |
+
+### Options, faces and constants
+
+The options and faces are listed under [Customisation](#customisation).
+`mdwt-version` is also a constant holding the version string (for example
+`"0.6.0"`).
+
 ## How it works
 
 Emacs cannot put the cursor inside a display string. So instead of one
