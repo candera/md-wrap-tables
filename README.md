@@ -39,6 +39,7 @@ only that cell's text.
   you type.
 - **Other edit methods:** a small edit window below the table, or the
   minibuffer.
+- **Row and column insertion** from the grid.
 - **Raw-source toggle** for free-form editing of the pipe-table text.
 - **Markdown details handled:** `<br>` in a cell forces a line break; `\|`
   escapes and pipes inside `` `code` `` are respected; column alignment
@@ -162,6 +163,8 @@ or `C-g` to cancel.
 | `C-a` / `C-e` (`Home` / `End`)         | First / last screen line of the current cell's text           |
 | `M-a` / `M-e`                          | First / last cell of the row                                  |
 | `C-M-a` / `C-M-e`                      | First (header) / last row of the table, same column           |
+| `M-S-↓` (`C-u M-S-↓`)                  | Insert an empty row above (below) the current row             |
+| `M-S-→` (`C-u M-S-→`)                  | Insert an empty column left (right) of the current column     |
 | `RET`, double-click                    | Edit the cell (method set by `mdwt-edit-method`)              |
 | Typing a character, `DEL`              | Start editing the cell in place (with the `inplace` method)   |
 | `mouse-1`                              | Select the clicked cell                                       |
@@ -384,6 +387,8 @@ tables even in modes that bind them.
 | `mdwt-cell-top` / `mdwt-cell-bottom`  | `C-a` / `C-e`               | First / last screen line of the cell's text                  |
 | `mdwt-cell-first` / `mdwt-cell-last`  | `M-a` / `M-e`               | First / last cell of the row                                 |
 | `mdwt-row-first` / `mdwt-row-last`    | `C-M-a` / `C-M-e`           | First (header) / last row, same column                       |
+| `mdwt-insert-row`                     | `M-S-↓`                     | Insert an empty row above the current one; below with `C-u`  |
+| `mdwt-insert-column`                  | `M-S-→`                     | Insert an empty column to the left; to the right with `C-u`  |
 | `mdwt-cell-type`                      | printing keys               | Start an in-place edit and insert the key (`inplace` method) |
 | `mdwt-cell-type-backspace`            | `DEL`                       | Start an in-place edit and delete backward                   |
 | `mdwt-cell-blocked`                   | `C-d`, `C-k`, `C-y`         | Refuse to change the rendered table; show the edit keys      |
@@ -445,6 +450,8 @@ that cell's text in the pipe-table line.
 - Very small tables whose rendered grid has more lines than the table source
   has characters can't give every screen line its own cursor position. The
   extra lines are drawn but point can't reach them.
+- Rows can't be inserted above the header, and columns can't be inserted
+  into Org tables (`|---+---|` separators).
 - Evil-mode key bindings are not handled.
 
 ## Troubleshooting

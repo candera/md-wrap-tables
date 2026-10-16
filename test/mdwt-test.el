@@ -496,6 +496,62 @@ Return the text the edit buffer started with."
         (mdwt-test--check "saving after the resize writes the edit"
           (string-match-p "to wrapQ |$" (buffer-string)))))))
 
+;;;; Rows and columns
+
+(ert-deftest mdwt-test-insert-row ()
+  (mdwt-test--with-table "| A | B |\n|---|---|\n| x | y |\n"
+    (goto-char (point-min))
+    (mdwt--reveal)
+    (mdwt-test--check "insertion keys bound"
+      (equal (mapcar (lambda (k) (key-binding (kbd k))) '("M-S-<down>" "M-S-<right>"))
+             '(mdwt-insert-row mdwt-insert-column)))
+    (mdwt-test--check "no row above the header"
+      (condition-case nil (progn (mdwt-insert-row) nil) (user-error t)))
+    (mdwt-test--cmd #'mdwt-cell-next)
+    (let ((current-prefix-arg '(4))) (mdwt-test--cmd #'mdwt-insert-row))
+    (mdwt-test--check "C-u: empty row below the header"
+      (equal (buffer-string) "| A | B |\n|---|---|\n|  |  |\n| x | y |\n"))
+    (mdwt-test--check "cursor on the new row, same column" (equal mdwt--cell '(1 . 1)))
+    (mdwt-test--cmd #'mdwt-row-last)
+    (mdwt-test--cmd #'mdwt-cell-type ?q)
+    (mdwt-test--cmd #'mdwt-insert-row)
+    (mdwt-test--check "in-place edit saved, row inserted above the current one"
+      (equal (buffer-string) "| A | B |\n|---|---|\n|  |  |\n|  |  |\n| x | yq |\n"))
+    (mdwt-test--check "cursor on the new row" (equal mdwt--cell '(2 . 1)))
+    (mdwt-test--check "rendered with the new rows"
+      (equal (overlay-get mdwt--cell-ov 'mdwt-shape) '(4 . 2))))
+  (mdwt-test--with-table "| A |\n|---|\n| x |"
+    (goto-char (point-min))
+    (mdwt--reveal)
+    (mdwt-test--cmd #'mdwt-row-last)
+    (let ((current-prefix-arg '(4))) (mdwt-test--cmd #'mdwt-insert-row))
+    (mdwt-test--check "below the last line of the buffer"
+      (equal (buffer-string) "| A |\n|---|\n| x |\n|  |"))
+    (mdwt-test--check "cursor on the new last row" (equal mdwt--cell '(2 . 0)))))
+
+(ert-deftest mdwt-test-insert-column ()
+  (mdwt-test--with-table "| A | B |\n|:-:|---|\n| x ||\n| y |\n"
+    (goto-char (point-min))
+    (mdwt--reveal)
+    (mdwt-test--cmd #'mdwt-cell-next)
+    (mdwt-test--cmd #'mdwt-insert-column)
+    (mdwt-test--check "column left of B; empty and short rows handled"
+      (equal (buffer-string)
+             "| A |  | B |\n|:-:| --- |---|\n| x |  ||\n| y |  |\n"))
+    (mdwt-test--check "cursor on the new column" (equal mdwt--cell '(0 . 1)))
+    (mdwt-test--cmd #'mdwt-cell-last)
+    (let ((current-prefix-arg '(4))) (mdwt-test--cmd #'mdwt-insert-column))
+    (mdwt-test--check "C-u: column after the last one; shorter rows untouched"
+      (equal (buffer-string)
+             "| A |  | B |  |\n|:-:| --- |---| --- |\n| x |  ||  |\n| y |  |\n"))
+    (mdwt-test--check "cursor on the new last column"
+      (and (equal mdwt--cell '(0 . 3))
+           (equal (overlay-get mdwt--cell-ov 'mdwt-shape) '(3 . 4)))))
+  (mdwt-test--with-table "| A | B |\n|---+---|\n| x | y |\n"
+    (goto-char (point-min))
+    (mdwt--reveal)
+    (should (condition-case nil (progn (mdwt-insert-column) nil) (user-error t)))))
+
 ;;;; Loading
 
 (ert-deftest mdwt-test-unload ()

@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `mdwt-insert-row` (`M-S-<down>`) inserts an empty row above the current
+  row, or below it with `C-u`. `mdwt-insert-column` (`M-S-<right>`) inserts
+  an empty column to the left of the current column, or to the right with
+  `C-u`. The cursor moves to the new cell, and an in-place edit in progress
+  is saved first.
+
 ### Changed
 
 - Loading the package no longer has side effects. It doesn't print a

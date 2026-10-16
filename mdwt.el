@@ -51,6 +51,9 @@
 ;; cell saves.  Alternatively edit in a small window below the table
 ;; (C-c C-c saves, C-c C-k cancels) or in the minibuffer.
 ;;
+;; M-S-<down> inserts an empty row above the current one (below with
+;; C-u), and M-S-<right> an empty column to its left (right with C-u).
+;;
 ;; `mdwt-toggle-source' shows the raw source of the table at point for
 ;; free-form editing (it re-renders when point leaves).  Set
 ;; `mdwt-reveal-at-point' to reveal automatically instead.
@@ -760,6 +763,8 @@ is re-rendered automatically when point leaves the table."
   "M-e" #'mdwt-cell-last
   "C-M-a" #'mdwt-row-first
   "C-M-e" #'mdwt-row-last
+  "M-S-<down>" #'mdwt-insert-row
+  "M-S-<right>" #'mdwt-insert-column
   "<remap> <self-insert-command>" #'mdwt-cell-type
   "<remap> <org-self-insert-command>" #'mdwt-cell-type
   "DEL" #'mdwt-cell-type-backspace
@@ -1208,6 +1213,83 @@ See `mdwt-edit-method'; other methods refuse typing in the table."
       (mdwt-cell-blocked)
     (mdwt--ip-start)
     (call-interactively #'mdwt-ip-delete-backward)))
+
+;;;; Rows and columns
+;;
+;; These commands change the table source, then re-render the table and
+;; put the cell cursor on the new cell.
+
+(defun mdwt--structure-begin ()
+  "Save any in-place edit; return a marker at the current table's start."
+  (when mdwt--ip-text (mdwt--ip-finish))
+  (copy-marker (overlay-start mdwt--cell-ov)))
+
+(defun mdwt--structure-end (marker row col)
+  "Re-render the table starting at MARKER and select its cell (ROW . COL)."
+  (goto-char marker)
+  (set-marker marker nil)
+  (mdwt-refresh)
+  (when-let* ((tbl (mdwt--table-under-point)))
+    (setq mdwt--pending-col col)
+    (mdwt--goto-line tbl (mdwt--row-first tbl row))
+    (mdwt--track)))
+
+(defun mdwt-insert-row (&optional below)
+  "Insert an empty row above the current row, or below it if BELOW.
+Interactively, BELOW is the prefix argument.  The header row only takes
+a row below it."
+  (interactive "P")
+  (unless mdwt--cell-ov (user-error "No table cell selected"))
+  (let ((new (+ (car mdwt--cell) (if below 1 0))))
+    (when (= new 0) (user-error "Cannot insert a row above the header"))
+    (let* ((marker (mdwt--structure-begin))
+           (ncols (cdr (overlay-get mdwt--cell-ov 'mdwt-shape)))
+           (row (concat (nth 1 (overlay-get mdwt--cell-ov 'mdwt-src))
+                        "|" (apply #'concat (make-list ncols "  |")))))
+      (save-excursion
+        (goto-char marker)
+        ;; Body row R is on source line R+1, past the separator.
+        (forward-line (1+ new))
+        (if (and (eobp) (not (bolp)))
+            (insert "\n" row)
+          (insert row "\n")))
+      (mdwt--structure-end marker new (cdr mdwt--cell)))))
+
+(defun mdwt--insert-cell-in-line (line k text)
+  "Return table LINE with a new cell holding TEXT inserted as cell K.
+A row with fewer than K cells is returned unchanged."
+  (let* ((spans (mdwt--cell-spans line))
+         (n (length spans)))
+    (cond ((< k n)
+           (let ((p (car (nth k spans))))
+             ;; Back over the padding to just after the pipe before cell K.
+             (while (and (> p 0) (memq (aref line (1- p)) '(?\s ?\t))) (cl-decf p))
+             (concat (substring line 0 p) " " text " |" (substring line p))))
+          ((= k n)
+           (let ((base (string-trim-right line)))
+             (concat base (if (string-suffix-p "|" base) "" " |") " " text " |")))
+          (t line))))
+
+(defun mdwt-insert-column (&optional right)
+  "Insert an empty column left of the current column, or right of it if RIGHT.
+Interactively, RIGHT is the prefix argument."
+  (interactive "P")
+  (unless mdwt--cell-ov (user-error "No table cell selected"))
+  (when (string-search "+" (nth 1 (car (overlay-get mdwt--cell-ov 'mdwt-src))))
+    (user-error "Only Markdown tables can take new columns"))
+  (let* ((marker (mdwt--structure-begin))
+         (col (+ (cdr mdwt--cell) (if right 1 0)))
+         (n (length (car (overlay-get mdwt--cell-ov 'mdwt-src)))))
+    (save-excursion
+      (goto-char marker)
+      (dotimes (i n)
+        (let* ((line (mdwt--line))
+               (new (mdwt--insert-cell-in-line line col (if (= i 1) "---" ""))))
+          (unless (equal new line)
+            (delete-region (line-beginning-position) (line-end-position))
+            (insert new)))
+        (forward-line 1)))
+    (mdwt--structure-end marker (car mdwt--cell) col)))
 
 ;;;; Mode
 
