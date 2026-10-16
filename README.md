@@ -53,7 +53,23 @@ only that cell's text.
 
 ## Installation
 
-### `use-package` with `:vc` (Emacs 30+)
+`mdwt` is not on MELPA, so give your package manager the GitHub location.
+Pick the section for the package manager you use, and don't mix them.
+
+### straight.el
+
+```elisp
+(use-package mdwt
+  :straight (:host github :repo "cmoxiv/md-wrap-tables")
+  :hook ((markdown-mode gfm-mode) . mdwt-mode))
+```
+
+Use this form if you set `straight-use-package-by-default`. With that
+setting, `use-package` hands every package to straight first, even one
+declared with `:vc`. straight then looks `mdwt` up in its recipe
+repositories and fails with *"Could not find package mdwt"*.
+
+### `package.el` with `use-package :vc` (Emacs 30+)
 
 ```elisp
 (use-package mdwt
@@ -61,11 +77,17 @@ only that cell's text.
   :hook ((markdown-mode gfm-mode) . mdwt-mode))
 ```
 
-### straight.el
+### `package.el` on Emacs 29
+
+The `use-package` in Emacs 29 has no `:vc` keyword, but `package-vc-install`
+does exist:
 
 ```elisp
+(unless (package-installed-p 'mdwt)
+  (package-vc-install '(mdwt :url "https://github.com/cmoxiv/md-wrap-tables")))
+
 (use-package mdwt
-  :straight (:host github :repo "cmoxiv/md-wrap-tables")
+  :ensure nil
   :hook ((markdown-mode gfm-mode) . mdwt-mode))
 ```
 
@@ -89,14 +111,15 @@ tries to download the package from a recipe repository and fails with
 
 ### Full configuration example
 
-Every option, with its default value:
+Every option, with its default value. This example uses straight.el; with
+`package.el`, replace the `:straight` line with the `:vc` line from above.
 
 ```elisp
 (use-package markdown-mode
   :mode ("\\.md\\'" . gfm-mode))
 
 (use-package mdwt
-  :vc (:url "https://github.com/cmoxiv/md-wrap-tables" :rev :newest)
+  :straight (:host github :repo "cmoxiv/md-wrap-tables")
   :commands (mdwt-mode mdwt-refresh mdwt-toggle-source mdwt-version)
   :hook ((markdown-mode gfm-mode) . mdwt-mode)
   :bind (:map mdwt-mode-map
