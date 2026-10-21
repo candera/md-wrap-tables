@@ -26,6 +26,9 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 
+- Tables leave room for the line numbers of `display-line-numbers-mode`.
+  They are drawn inside the window body, so tables were rendered a few
+  columns too wide and their rows were continued on the next screen line.
 - Docstrings use the imperative mood that checkdoc requires on Emacs 29
   and 30.
 - The unload test passes on Emacs 29.

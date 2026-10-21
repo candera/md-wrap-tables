@@ -466,6 +466,17 @@ Return the text the edit buffer started with."
         (mdwt-test--check "one undo step reverts the saved cell edit"
           (not (string-match-p "wordK" (buffer-string))))))))
 
+(ert-deftest mdwt-test-avail-line-numbers ()
+  "Line numbers are drawn inside the window body, so leave room for them."
+  (with-temp-buffer
+    (set-window-buffer (selected-window) (current-buffer))
+    (cl-letf (((symbol-function 'line-number-display-width)
+               (lambda (&optional _pixelwise) 4.0)))
+      (let ((without (progn (setq display-line-numbers nil) (mdwt--avail)))
+            (with (progn (setq display-line-numbers t) (mdwt--avail))))
+        (mdwt-test--check "the line-number columns are taken off the width"
+          (= (- without with) 4))))))
+
 (ert-deftest mdwt-test-inplace-resize ()
   "A window resize mid-edit re-renders for the new width and keeps the edit."
   (let ((mdwt-edit-method 'inplace))

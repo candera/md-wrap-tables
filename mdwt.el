@@ -384,9 +384,18 @@ screen line; ROW is nil for rules, 0 for the header."
 (defvar mdwt-mode)
 
 (defun mdwt--avail ()
-  "Columns available for tables in the current buffer's window."
+  "Columns available for tables in the current buffer's window.
+Line numbers (`display-line-numbers') are drawn inside the window
+body, so their columns are not available."
   (let ((win (get-buffer-window (current-buffer) t)))
-    (- (if win (window-body-width win) 80) mdwt-margin)))
+    (- (if win
+           (- (window-body-width win)
+              (if display-line-numbers
+                  (ceiling (with-selected-window win
+                             (line-number-display-width 'columns)))
+                0))
+         80)
+       mdwt-margin)))
 
 (defun mdwt--colpos (str ncols)
   "Return the index in screen line STR of each of NCOLS columns' text."
